@@ -11,7 +11,7 @@ import (
 func sendRequest(url string) *http.Response {
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("We can't get them the weather!")
+		fmt.Println("We can't get the weather!")
 		fmt.Fprintln(os.Stderr, "Failed to initialize.!", err)
 		os.Exit(2)
 	}
@@ -22,15 +22,15 @@ func sendRequest(url string) *http.Response {
 	return resp
 }
 
-func parseRetryAfterToNumber(retryAfter string) time.Duration {
+func parseRetryAfterNumber(retryAfter string) time.Duration {
 	if sleepTime, err := time.ParseDuration(retryAfter + "s"); err != nil {
-		return parseRetryAfterToString(retryAfter)
+		return parseRetryAfterString(retryAfter)
 	} else {
 		return sleepTime
 	}
 }
 
-func parseRetryAfterToString(retryAfter string) time.Duration {
+func parseRetryAfterString(retryAfter string) time.Duration {
 	sleepTime := time.Second
 	if timeStamp, err := time.Parse(http.TimeFormat, retryAfter); err == nil {
 		sleepTime = time.Until(timeStamp)
@@ -56,21 +56,21 @@ func main() {
 			// If I receive 429 but can't find ["Retry-After"] so I determine 5s to sleep
 			// because you mentioned more than 5s give up.
 			if resp.Header["Retry-After"] == nil {
-				// I added with before sleep time to prevent sleeping long time if all before were less than 5s
+				// I added with the previous sleep times to prevent sleeping for too long if all previous ones had sleep time.
 				sleepTime += 5 * time.Second
 			} else {
 				retryAfter := resp.Header.Get("Retry-After")
-				sleepTime += parseRetryAfterToNumber(retryAfter)
+				sleepTime += parseRetryAfterNumber(retryAfter)
 			}
-			if sleepTime > time.Second && sleepTime < 5*time.Second {
-				fmt.Println("Things may be a bit slow because we're doing a retry!")
-				time.Sleep(sleepTime)
-			} else {
-				fmt.Println("We can't get them the weather!")
+			if sleepTime > 5*time.Second {
+				fmt.Println("We can't get the weather!")
 				resp.Body.Close()
-				fmt.Fprintln(os.Stderr, "HTTP page not retrieved. Returned another error with the HTTP error code being 400 or above.")
+				fmt.Fprintln(os.Stderr, "Sleep time is more than 5 second so HTTP page not retrieved. Returned another error with the HTTP error code being 400 or above.")
 				os.Exit(22)
+			} else if sleepTime > time.Second {
+				fmt.Println("Things may be a bit slow because we're doing a retry!")
 			}
+			time.Sleep(sleepTime)
 		} else {
 			resp.Body.Close()
 			fmt.Fprintln(os.Stderr, "Failed to initialize!")
