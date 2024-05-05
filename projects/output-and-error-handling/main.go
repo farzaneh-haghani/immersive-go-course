@@ -36,6 +36,7 @@ func handleStatusCode(resp *http.Response, sleepTime *time.Duration) {
 	} else if resp.StatusCode == 429 {
 		// If I receive 429 but can't find ["Retry-After"] so I determine 1s to sleep. It act same as a while
 		retryAfter := resp.Header.Get("Retry-After")
+		// early return two possibility cases
 		if retryAfter == "" || retryAfter == "a while" {
 			// I added with the previous sleep times to prevent sleeping for too long and more than 5s give up.
 			*sleepTime += time.Second
@@ -57,11 +58,11 @@ func handleStatusCode(resp *http.Response, sleepTime *time.Duration) {
 	}
 }
 
-func parseRetryAfterNumber(retryAfter string) time.Duration {
+func parseRetryAfterNumber(retryAfter string) (*time.Duration,err) {
 	if sleepTime, err := time.ParseDuration(retryAfter + "s"); err != nil {
-		return parseRetryAfterString(retryAfter)
+		return parseRetryAfterString(retryAfter),nil
 	} else {
-		return sleepTime
+		return nil,err
 	}
 }
 
