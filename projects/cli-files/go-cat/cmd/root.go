@@ -27,7 +27,7 @@ func Execute() error {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	for i := 0; scanner.Scan(); i++ {
-		fmt.Println(scanner.Text())
+		os.Stdout.Write([]byte(scanner.Text()+"\n"))
 	}
 	if err := scanner.Err(); err != nil {
 		return err
