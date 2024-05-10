@@ -2,26 +2,41 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 )
 
 func Execute() error {
 	pathArr := os.Args[1:]
-	var list []fs.DirEntry
-	var err error
+
+	var path string
+	var comma bool
 
 	if len(pathArr) == 0 {
-		list, err = os.ReadDir(".")
-		if err != nil {
-			return err
-		}
-		output(list)
+		path = "."
+		directoryOutput(path, comma)
 		return nil
 	}
 
-	// situation: go-ls assets cmd
-	for i := 0; i < len(pathArr); i++ {
+	if pathArr[0] == "-m" {
+		comma = true
+	} else {
+		comma = false
+	}
+
+	if len(pathArr) == 1 && comma {
+		path = "."
+		directoryOutput(path, comma)
+		return nil
+	}
+
+	var i int
+	if comma {
+		i = 1
+	} else {
+		i = 0
+	}
+
+	for i < len(pathArr) {
 
 		isPathValid, err := os.Stat(pathArr[i])
 		if err != nil {
@@ -30,30 +45,42 @@ func Execute() error {
 
 		isDirectory := isPathValid.IsDir()
 		if !isDirectory {
-			os.Stdout.Write([]byte(pathArr[i] + "\t"))
+			if comma && i < len(pathArr)-1 {
+				os.Stdout.Write([]byte(pathArr[i] + ", "))
+			} else {
+				os.Stdout.Write([]byte(pathArr[i] + "  "))
+			}
 		} else {
-			list, err = os.ReadDir(pathArr[i])
-			if err != nil {
-				return err
+			dirPath1 := len(pathArr) > 1 && !comma
+			dirPath2 := len(pathArr) > 2 && comma
+			if dirPath1 || dirPath2 {
+				os.Stdout.Write([]byte("\n" + pathArr[i] + ":\n")) // situation: go-ls assets cmd
 			}
-
-			if len(pathArr) > 1 {
-				fmt.Println(pathArr[i] + ":")
-			}
-			output(list)
+			directoryOutput(pathArr[i], comma)
 			if i < len(pathArr)-1 {
 				fmt.Print("\n")
 			}
 		}
+		i++
 	}
 	fmt.Print("\n")
 	return nil
 }
 
-func output(list []fs.DirEntry) {
+func directoryOutput(path string, comma bool) error {
+
+	list, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+
 	for i := 0; i < len(list); i++ {
-		fileName := fmt.Sprint(list[i].Name(), "\t")
-		os.Stdout.Write([]byte(fileName))
+		if comma && i < len(list)-1 {
+			os.Stdout.Write([]byte(list[i].Name() + ",\t"))
+		} else {
+			os.Stdout.Write([]byte(list[i].Name() + " \t"))
+		}
 	}
 	fmt.Print("\n")
+	return nil
 }
