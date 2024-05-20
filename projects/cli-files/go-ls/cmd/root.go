@@ -1,62 +1,69 @@
 package cmd
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
 	"os"
 )
 
 func Execute() error {
-	pathArr := os.Args[1:]
 
-	var path string
-	var comma bool
+	comma := flag.Bool("m", false, "Add comma between the list")
+	help := flag.Bool("h", false, "Show help")
+	helpFilePath := "../go-cat/assets/help.txt"
+	flag.Parse()
 
-	if len(pathArr) == 0 {
-		path = "."
-		directoryOutput(path, comma)
-		return nil
-	}
-
-	if pathArr[0] == "-m" {
-		comma = true
+	var pathArr []string
+	if *comma && *help {
+		pathArr = os.Args[3:]
+	} else if !*comma && !*help {
+		pathArr = os.Args[1:]
 	} else {
-		comma = false
+		pathArr = os.Args[2:]
 	}
 
-	if len(pathArr) == 1 && comma {
-		path = "."
-		directoryOutput(path, comma)
-		return nil
-	}
-
-	var i int
-	if comma {
-		i = 1
-	} else {
-		i = 0
-	}
-
-	for i < len(pathArr) {
-
-		isPathValid, err := os.Stat(pathArr[i])
+	if *help {
+		err := OpenFile(helpFilePath)
 		if err != nil {
-			return fmt.Errorf("%s no such file or directory", pathArr[i])
+			return err
+		}
+	}
+
+	if len(pathArr) == 0 && !*help {
+		path := "."
+		err := DirectoryOutput(path, *comma)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	for i, path := range pathArr {
+
+		isPathValid, err := os.Stat(path)
+		if err != nil {
+			return err
 		}
 
 		isDirectory := isPathValid.IsDir()
 		if !isDirectory {
-			if comma && i < len(pathArr)-1 {
-				os.Stdout.Write([]byte(pathArr[i] + ", "))
+			var suffix string
+			if *comma && i < len(pathArr)-1 {
+				suffix = ", "
 			} else {
-				os.Stdout.Write([]byte(pathArr[i] + "  "))
+				suffix = "  "
 			}
+			os.Stdout.Write([]byte(path + suffix))
 		} else {
-			dirPath1 := len(pathArr) > 1 && !comma
-			dirPath2 := len(pathArr) > 2 && comma
-			if dirPath1 || dirPath2 {
-				os.Stdout.Write([]byte("\n" + pathArr[i] + ":\n")) // situation: go-ls assets cmd
+
+			if len(pathArr) > 1 {
+				os.Stdout.Write([]byte("\n" + path + ":\n")) // situation: go-ls assets cmd
 			}
-			directoryOutput(pathArr[i], comma)
+			err := DirectoryOutput(path, *comma)
+			if err != nil {
+				return err
+			}
 			if i < len(pathArr)-1 {
 				fmt.Print("\n")
 			}
@@ -67,7 +74,7 @@ func Execute() error {
 	return nil
 }
 
-func directoryOutput(path string, comma bool) error {
+func DirectoryOutput(path string, comma bool) error {
 
 	list, err := os.ReadDir(path)
 	if err != nil {
@@ -82,5 +89,33 @@ func directoryOutput(path string, comma bool) error {
 		}
 	}
 	fmt.Print("\n")
+	return nil
+}
+
+func OpenFile(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	isPathValid, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	isDirectory := isPathValid.IsDir()
+	if isDirectory {
+		return fmt.Errorf("%s: is a directory", path)
+	}
+
+	scanner := bufio.NewScanner(file)
+	for i := 0; scanner.Scan(); i++ {
+		os.Stdout.Write([]byte(scanner.Text() + "\n"))
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
 	return nil
 }

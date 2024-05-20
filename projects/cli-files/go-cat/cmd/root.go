@@ -26,7 +26,7 @@ func Execute() error {
 	}
 
 	if *help {
-		err := openFile(helpFilePath, false)
+		err := OpenFile(helpFilePath, false)
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ func Execute() error {
 	}
 
 	for _, path := range pathArr {
-		err := openFile(path, *numberLine)
+		err := OpenFile(path, *numberLine)
 		if err != nil {
 			return err
 		}
@@ -45,22 +45,12 @@ func Execute() error {
 	return nil
 }
 
-func openFile(path string, numberLine bool) error {
+func OpenFile(path string, numberLine bool) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-
-	isPathValid, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	isDirectory := isPathValid.IsDir()
-	if isDirectory {
-		return fmt.Errorf("%s: is a directory", path)
-	}
 
 	scanner := bufio.NewScanner(file)
 	for i := 0; scanner.Scan(); i++ {
