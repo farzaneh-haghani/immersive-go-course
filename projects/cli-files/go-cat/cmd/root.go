@@ -2,34 +2,29 @@ package cmd
 
 import (
 	"bufio"
+	"embed"
 	"flag"
 	"fmt"
 	"os"
 )
 
+//go:embed help.txt
+var helpFile embed.FS
+
 func Execute() error {
 
 	numberLine := flag.Bool("n", false, "Add number in front of each line")
 	help := flag.Bool("h", false, "Show help")
-	helpFilePath := "assets/help.txt"
 
 	flag.Parse()
-
-	var pathArr []string
-
-	if *numberLine && *help {
-		pathArr = os.Args[3:]
-	} else if !*numberLine && !*help {
-		pathArr = os.Args[1:]
-	} else {
-		pathArr = os.Args[2:]
-	}
+	pathArr := flag.Args()
 
 	if *help {
-		err := OpenFile(helpFilePath, false)
+		content, err := helpFile.ReadFile("help.txt")
 		if err != nil {
 			return err
 		}
+		fmt.Println(string(content))
 	}
 
 	if len(pathArr) == 0 && !*help {
@@ -54,12 +49,16 @@ func OpenFile(path string, numberLine bool) error {
 
 	scanner := bufio.NewScanner(file)
 	for i := 0; scanner.Scan(); i++ {
+		var suffix string
 		if numberLine {
-			text := fmt.Sprint("     ", i+1, "  ", scanner.Text()+"\n")
-			os.Stdout.Write([]byte(text))
+			suffix = fmt.Sprint("     ", i+1, "  ")
 		} else {
-			os.Stdout.Write([]byte(scanner.Text() + "\n"))
+			suffix = ""
 		}
+		os.Stdout.WriteString(suffix)
+		os.Stdout.WriteString(scanner.Text())
+		os.Stdout.WriteString("\n")
+
 	}
 
 	if err := scanner.Err(); err != nil {

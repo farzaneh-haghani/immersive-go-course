@@ -1,33 +1,29 @@
 package cmd
 
 import (
-	"bufio"
+	"embed"
 	"flag"
 	"fmt"
 	"os"
 )
 
+//go:embed help.txt
+var helpFile embed.FS
+
 func Execute() error {
 
 	comma := flag.Bool("m", false, "Add comma between the list")
 	help := flag.Bool("h", false, "Show help")
-	helpFilePath := "../go-cat/assets/help.txt"
-	flag.Parse()
 
-	var pathArr []string
-	if *comma && *help {
-		pathArr = os.Args[3:]
-	} else if !*comma && !*help {
-		pathArr = os.Args[1:]
-	} else {
-		pathArr = os.Args[2:]
-	}
+	flag.Parse()
+	pathArr := flag.Args()
 
 	if *help {
-		err := OpenFile(helpFilePath)
+		content, err := helpFile.ReadFile("help.txt")
 		if err != nil {
 			return err
 		}
+		fmt.Println(string(content))
 	}
 
 	if len(pathArr) == 0 && !*help {
@@ -41,12 +37,12 @@ func Execute() error {
 
 	for i, path := range pathArr {
 
-		isPathValid, err := os.Stat(path)
+		fileInfo, err := os.Stat(path)
 		if err != nil {
 			return err
 		}
 
-		isDirectory := isPathValid.IsDir()
+		isDirectory := fileInfo.IsDir()
 		if !isDirectory {
 			var suffix string
 			if *comma && i < len(pathArr)-1 {
@@ -54,11 +50,13 @@ func Execute() error {
 			} else {
 				suffix = "  "
 			}
-			os.Stdout.Write([]byte(path + suffix))
+			os.Stdout.WriteString(path)
+			os.Stdout.WriteString(suffix)
 		} else {
 
 			if len(pathArr) > 1 {
-				os.Stdout.Write([]byte("\n" + path + ":\n")) // situation: go-ls assets cmd
+				pathStr := "\n" + path + ":\n"
+				os.Stdout.WriteString(pathStr) // situation: go-ls assets cmd
 			}
 			err := DirectoryOutput(path, *comma)
 			if err != nil {
@@ -68,7 +66,7 @@ func Execute() error {
 				fmt.Print("\n")
 			}
 		}
-		i++
+
 	}
 	fmt.Print("\n")
 	return nil
@@ -82,40 +80,15 @@ func DirectoryOutput(path string, comma bool) error {
 	}
 
 	for i := 0; i < len(list); i++ {
+		var suffix string
 		if comma && i < len(list)-1 {
-			os.Stdout.Write([]byte(list[i].Name() + ",\t"))
+			suffix = ", \t"
 		} else {
-			os.Stdout.Write([]byte(list[i].Name() + " \t"))
+			suffix = " \t"
 		}
+		os.Stdout.WriteString(list[i].Name())
+		os.Stdout.WriteString(suffix)
 	}
 	fmt.Print("\n")
-	return nil
-}
-
-func OpenFile(path string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	isPathValid, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	isDirectory := isPathValid.IsDir()
-	if isDirectory {
-		return fmt.Errorf("%s: is a directory", path)
-	}
-
-	scanner := bufio.NewScanner(file)
-	for i := 0; scanner.Scan(); i++ {
-		os.Stdout.Write([]byte(scanner.Text() + "\n"))
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
 	return nil
 }
