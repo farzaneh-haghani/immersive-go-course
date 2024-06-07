@@ -11,13 +11,24 @@ import (
 var helpFile embed.FS
 
 func Execute() error {
+	comma, help, pathArr := ParsingFlags()
 
-	comma := flag.Bool("m", false, "Add comma between the list")
-	help := flag.Bool("h", false, "Show help")
+	err := flagHandling(comma, help, pathArr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+func ParsingFlags() (comma *bool, help *bool, pathArr []string) {
+	comma = flag.Bool("m", false, "Add comma between the list")
+	help = flag.Bool("h", false, "Show help")
 	flag.Parse()
-	pathArr := flag.Args()
+	pathArr = flag.Args()
+	return
+}
 
+func flagHandling(comma *bool, help *bool, pathArr []string) error {
 	if *help {
 		content, err := helpFile.ReadFile("help.txt")
 		if err != nil {
@@ -32,7 +43,6 @@ func Execute() error {
 		if err != nil {
 			return err
 		}
-		return nil
 	}
 
 	for i, path := range pathArr {
@@ -66,7 +76,6 @@ func Execute() error {
 				fmt.Print("\n")
 			}
 		}
-
 	}
 	fmt.Print("\n")
 	return nil
