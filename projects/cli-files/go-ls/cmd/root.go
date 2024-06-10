@@ -4,6 +4,7 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -13,7 +14,7 @@ var helpFile embed.FS
 func Execute() error {
 	comma, help, pathArr := ParsingFlags()
 
-	err := flagHandling(comma, help, pathArr)
+	err := flagHandling(os.Stdout, *comma, *help, pathArr)
 	if err != nil {
 		return err
 	}
@@ -28,18 +29,18 @@ func ParsingFlags() (comma *bool, help *bool, pathArr []string) {
 	return
 }
 
-func flagHandling(comma *bool, help *bool, pathArr []string) error {
-	if *help {
+func flagHandling(w io.Writer, comma bool, help bool, pathArr []string) error {
+	if help {
 		content, err := helpFile.ReadFile("help.txt")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(content))
+		fmt.Fprintln(w, string(content))
 	}
 
-	if len(pathArr) == 0 && !*help {
+	if len(pathArr) == 0 && !help {
 		path := "."
-		err := DirectoryOutput(path, *comma)
+		err := DirectoryOutput(os.Stdout, path, comma)
 		if err != nil {
 			return err
 		}
@@ -55,20 +56,20 @@ func flagHandling(comma *bool, help *bool, pathArr []string) error {
 		isDirectory := fileInfo.IsDir()
 		if !isDirectory {
 			var suffix string
-			if *comma && i < len(pathArr)-1 {
+			if comma && i < len(pathArr)-1 {
 				suffix = ", "
 			} else {
 				suffix = "  "
 			}
-			os.Stdout.WriteString(path)
-			os.Stdout.WriteString(suffix)
+			io.WriteString(w, path)
+			io.WriteString(w, suffix)
 		} else {
 
 			if len(pathArr) > 1 {
 				pathStr := "\n" + path + ":\n"
-				os.Stdout.WriteString(pathStr) // situation: go-ls assets cmd
+				io.WriteString(w, pathStr) // situation: go-ls assets cmd
 			}
-			err := DirectoryOutput(path, *comma)
+			err := DirectoryOutput(os.Stdout, path, comma)
 			if err != nil {
 				return err
 			}
@@ -81,8 +82,7 @@ func flagHandling(comma *bool, help *bool, pathArr []string) error {
 	return nil
 }
 
-func DirectoryOutput(path string, comma bool) error {
-
+func DirectoryOutput(w io.Writer, path string, comma bool) error {
 	list, err := os.ReadDir(path)
 	if err != nil {
 		return err
@@ -95,8 +95,8 @@ func DirectoryOutput(path string, comma bool) error {
 		} else {
 			suffix = " \t"
 		}
-		os.Stdout.WriteString(list[i].Name())
-		os.Stdout.WriteString(suffix)
+		io.WriteString(w, list[i].Name())
+		io.WriteString(w, suffix)
 	}
 	fmt.Print("\n")
 	return nil
