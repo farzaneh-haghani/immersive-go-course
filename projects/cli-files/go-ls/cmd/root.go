@@ -14,7 +14,7 @@ var helpFile embed.FS
 func Execute() error {
 	comma, help, pathArr := ParsingFlags()
 
-	err := flagHandling(os.Stdout, *comma, *help, pathArr)
+	err := flagHandling(os.Stdout, comma, help, pathArr)
 	if err != nil {
 		return err
 	}
@@ -29,18 +29,19 @@ func ParsingFlags() (comma *bool, help *bool, pathArr []string) {
 	return
 }
 
-func flagHandling(w io.Writer, comma bool, help bool, pathArr []string) error {
-	if help {
+func flagHandling(w io.Writer, comma *bool, help *bool, pathArr []string) error {
+	if *help {
 		content, err := helpFile.ReadFile("help.txt")
 		if err != nil {
 			return err
 		}
 		fmt.Fprintln(w, string(content))
+		return nil
 	}
 
-	if len(pathArr) == 0 && !help {
+	if len(pathArr) == 0 {
 		path := "."
-		err := DirectoryOutput(os.Stdout, path, comma)
+		err := DirectoryOutput(w, path, *comma)
 		if err != nil {
 			return err
 		}
@@ -56,20 +57,21 @@ func flagHandling(w io.Writer, comma bool, help bool, pathArr []string) error {
 		isDirectory := fileInfo.IsDir()
 		if !isDirectory {
 			var suffix string
-			if comma && i < len(pathArr)-1 {
+			if *comma && i < len(pathArr)-1 {
 				suffix = ", "
 			} else {
 				suffix = "  "
 			}
 			io.WriteString(w, path)
 			io.WriteString(w, suffix)
+
 		} else {
 
 			if len(pathArr) > 1 {
 				pathStr := "\n" + path + ":\n"
 				io.WriteString(w, pathStr) // situation: go-ls assets cmd
 			}
-			err := DirectoryOutput(os.Stdout, path, comma)
+			err := DirectoryOutput(w, path, *comma)
 			if err != nil {
 				return err
 			}
