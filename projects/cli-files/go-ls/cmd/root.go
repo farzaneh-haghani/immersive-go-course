@@ -14,7 +14,7 @@ var helpFile string
 func Execute() error {
 	comma, help, pathArr := ParsingFlags()
 
-	err := flagHandler(os.Stdout, comma, help, pathArr)
+	err := flagHandler(os.Stdout, *comma, *help, pathArr)
 	if err != nil {
 		return err
 	}
@@ -29,15 +29,15 @@ func ParsingFlags() (comma *bool, help *bool, pathArr []string) {
 	return
 }
 
-func flagHandler(w io.Writer, comma *bool, help *bool, pathArr []string) error {
-	if *help {
+func flagHandler(w io.Writer, comma bool, help bool, pathArr []string) error {
+	if help {
 		fmt.Fprintln(w, string(helpFile))
 		return nil
 	}
 
 	if len(pathArr) == 0 {
 		path := "."
-		err := DirectoryOutput(w, path, *comma)
+		err := DirectoryOutput(w, path, comma)
 		if err != nil {
 			return err
 		}
@@ -53,7 +53,7 @@ func flagHandler(w io.Writer, comma *bool, help *bool, pathArr []string) error {
 		isDirectory := fileInfo.IsDir()
 		if !isDirectory {
 			var suffix string
-			if *comma && i < len(pathArr)-1 {
+			if comma && i < len(pathArr)-1 {
 				suffix = ", "
 			} else {
 				suffix = "  "
@@ -67,7 +67,7 @@ func flagHandler(w io.Writer, comma *bool, help *bool, pathArr []string) error {
 				pathStr := "\n" + path + ":\n"
 				io.WriteString(w, pathStr) // situation: go-ls assets cmd
 			}
-			err := DirectoryOutput(w, path, *comma)
+			err := DirectoryOutput(w, path, comma)
 			if err != nil {
 				return err
 			}

@@ -15,7 +15,7 @@ var helpFile string
 func Execute() error {
 	fileNames, numberLine, help := ParsingFlags()
 
-	err := flagHandler(os.Stdout, fileNames, numberLine, help)
+	err := flagHandler(os.Stdout, fileNames, *numberLine, *help)
 	if err != nil {
 		return err
 	}
@@ -31,18 +31,18 @@ func ParsingFlags() (fileNames []string, numberLine *bool, help *bool) {
 	return
 }
 
-func flagHandler(w io.Writer, fileNames []string, numberLine *bool, help *bool) error {
-	if *help {
+func flagHandler(w io.Writer, fileNames []string, numberLine bool, help bool) error {
+	if help {
 		fmt.Fprintln(w, string(helpFile))
 		return nil
 	}
 
-	if len(fileNames) == 0 && !*help {
+	if len(fileNames) == 0 && !help {
 		return fmt.Errorf("did not provide any path")
 	}
 
 	for _, fileName := range fileNames {
-		err := OpenFile(w, fileName, *numberLine)
+		err := OutputFile(w, fileName, numberLine)
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ func flagHandler(w io.Writer, fileNames []string, numberLine *bool, help *bool) 
 	return nil
 }
 
-func OpenFile(w io.Writer, fileName string, numberLine bool) error {
+func OutputFile(w io.Writer, fileName string, numberLine bool) error {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return err
