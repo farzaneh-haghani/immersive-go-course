@@ -1,0 +1,11 @@
+     The following options are available:
+       -@      Display extended attribute keys and sizes in long (-l) output.
+
+     -A      Include directory entries whose names begin with a dot (‘.’) except
+             for . and ...  Automatically set for the super-user unless -I is
+             specified.
+
+     -B      Force printing of non-printable characters (as defined by ctype(3)
+             and current locale settings) in file names as \xxx, where xxx is
+             the numeric value of the character in octal.  This option is not
+             defined in IEEE Std 1003.1-2008 (“POSIX.1”).
