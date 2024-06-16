@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestExecute(t *testing.T) {
+func TestFlagHandling(t *testing.T) {
 	comma := flag.Bool("m", false, "Add comma between the list")
 	help := flag.Bool("h", false, "Show help")
 
@@ -20,8 +20,9 @@ func TestExecute(t *testing.T) {
 		expected string
 	}{
 		{"false", "false", "Listing root files without any flags", comma, help, []string{}, "help.txt \troot.go \troot_test.go \t"},
-		{"true", "false", "Listing root files without any flags", comma, help, []string{}, "help.txt, \troot.go, \troot_test.go \t"},
-		{"false", "true", "Listing root files with flag h", comma, help, []string{}, "\n"},
+		{"false", "false", "Listing files for cmd and assets directories without any flags", comma, help, []string{"../cmd", "../assets"}, "\n../cmd:\nhelp.txt \troot.go \troot_test.go \t\n../assets:\ndew.txt \tfor_you.txt \train.txt \t"},
+		{"true", "false", "Listing root files with comma between them", comma, help, []string{}, "help.txt, \troot.go, \troot_test.go \t"},
+		{"false", "true", "Showing help", comma, help, []string{}, "\n"},
 		{"false", "false", "Don't list any files for wrong directory", comma, help, []string{"test"}, "stat test: no such file or directory"},
 	}
 

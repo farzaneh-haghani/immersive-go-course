@@ -5,6 +5,7 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -12,19 +13,32 @@ import (
 var helpFile embed.FS
 
 func Execute() error {
+	pathArr, numberLine, help := ParsingFlags()
 
-	numberLine := flag.Bool("n", false, "Add number in front of each line")
-	help := flag.Bool("h", false, "Show help")
+	err := flagHandling(os.Stdout, pathArr, numberLine, help)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ParsingFlags() (pathArr []string, numberLine *bool, help *bool) {
+	numberLine = flag.Bool("n", false, "Add number in front of each line")
+	help = flag.Bool("h", false, "Show help")
 
 	flag.Parse()
-	pathArr := flag.Args()
+	pathArr = flag.Args()
+	return
+}
 
+func flagHandling(w io.Writer, pathArr []string, numberLine *bool, help *bool) error {
 	if *help {
 		content, err := helpFile.ReadFile("help.txt")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(content))
+		fmt.Fprintln(w, string(content))
+		return nil
 	}
 
 	if len(pathArr) == 0 && !*help {
@@ -32,7 +46,7 @@ func Execute() error {
 	}
 
 	for _, path := range pathArr {
-		err := OpenFile(path, *numberLine)
+		err := OpenFile(w, path, *numberLine)
 		if err != nil {
 			return err
 		}
@@ -40,7 +54,7 @@ func Execute() error {
 	return nil
 }
 
-func OpenFile(path string, numberLine bool) error {
+func OpenFile(w io.Writer, path string, numberLine bool) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -55,9 +69,9 @@ func OpenFile(path string, numberLine bool) error {
 		} else {
 			suffix = ""
 		}
-		os.Stdout.WriteString(suffix)
-		os.Stdout.WriteString(scanner.Text())
-		os.Stdout.WriteString("\n")
+		io.WriteString(w, suffix)
+		io.WriteString(w, scanner.Text())
+		io.WriteString(w, "\n")
 
 	}
 
