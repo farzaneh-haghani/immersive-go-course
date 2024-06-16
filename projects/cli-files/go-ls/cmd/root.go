@@ -14,7 +14,7 @@ var helpFile string
 func Execute() error {
 	comma, help, pathArr := ParsingFlags()
 
-	err := flagHandling(os.Stdout, comma, help, pathArr)
+	err := flagHandler(os.Stdout, comma, help, pathArr)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func ParsingFlags() (comma *bool, help *bool, pathArr []string) {
 	return
 }
 
-func flagHandling(w io.Writer, comma *bool, help *bool, pathArr []string) error {
+func flagHandler(w io.Writer, comma *bool, help *bool, pathArr []string) error {
 	if *help {
 		fmt.Fprintln(w, string(helpFile))
 		return nil
