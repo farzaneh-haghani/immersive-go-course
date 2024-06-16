@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"bufio"
-	"embed"
+	_ "embed"
 	"flag"
 	"fmt"
 	"io"
@@ -10,7 +10,7 @@ import (
 )
 
 //go:embed help.txt
-var helpFile embed.FS
+var helpFile string
 
 func Execute() error {
 	pathArr, numberLine, help := ParsingFlags()
@@ -33,11 +33,7 @@ func ParsingFlags() (pathArr []string, numberLine *bool, help *bool) {
 
 func flagHandling(w io.Writer, pathArr []string, numberLine *bool, help *bool) error {
 	if *help {
-		content, err := helpFile.ReadFile("help.txt")
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(w, string(content))
+		fmt.Fprintln(w, string(helpFile))
 		return nil
 	}
 

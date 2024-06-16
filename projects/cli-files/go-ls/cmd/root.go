@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"embed"
+	_ "embed"
 	"flag"
 	"fmt"
 	"io"
@@ -9,7 +9,7 @@ import (
 )
 
 //go:embed help.txt
-var helpFile embed.FS
+var helpFile string
 
 func Execute() error {
 	comma, help, pathArr := ParsingFlags()
@@ -31,11 +31,7 @@ func ParsingFlags() (comma *bool, help *bool, pathArr []string) {
 
 func flagHandling(w io.Writer, comma *bool, help *bool, pathArr []string) error {
 	if *help {
-		content, err := helpFile.ReadFile("help.txt")
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(w, string(content))
+		fmt.Fprintln(w, string(helpFile))
 		return nil
 	}
 

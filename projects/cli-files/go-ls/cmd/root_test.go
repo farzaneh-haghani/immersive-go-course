@@ -16,7 +16,7 @@ func TestFlagHandling(t *testing.T) {
 		name     string
 		comma    *bool
 		help     *bool
-		eachPath []string
+		pathArr []string
 		expected string
 	}{
 		{"false", "false", "Listing root files without any flags", comma, help, []string{}, "help.txt \troot.go \troot_test.go \t"},
@@ -32,11 +32,10 @@ func TestFlagHandling(t *testing.T) {
 			flag.Set("h", test.flagH)
 			flag.Parse()
 			if *test.help == true {
-				content, _ := helpFile.ReadFile("help.txt")
-				test.expected = string(content) + test.expected
+				test.expected = string(helpFile) + test.expected
 			}
 			var output bytes.Buffer
-			got := flagHandling(&output, test.comma, test.help, test.eachPath)
+			got := flagHandling(&output, test.comma, test.help, test.pathArr)
 			if output.String() != test.expected && got.Error() != test.expected {
 				t.Errorf("got %s but expected %s", output.String(), test.expected)
 			}
