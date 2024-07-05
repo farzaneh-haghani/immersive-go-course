@@ -1,5 +1,13 @@
 package main
 
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"os"
+	"strconv"
+)
+
 type OurByteBuffer struct {
 	myBuff []byte
 }
@@ -32,3 +40,45 @@ func (b *OurByteBuffer) OurRead(s []byte) {
 // I am not sure. It won't be safe in all cases.
 // Maybe it was ok if we write to the end of our buffer with one thread and read from start of it with another thread. but there is risk and it is better to finish one operation, then another.(async await)
 // But It is unsafe to write to the same buffer with two different thread (or read as well).
+
+type FilteringPipe struct {
+	writer io.Writer
+}
+
+func NewFilteringPipe(w io.Writer) io.Writer {
+	var f FilteringPipe
+	f.writer = w
+	return &f
+}
+
+func (f *FilteringPipe) Write(text []byte) (int, error) {
+	// x:=make([]byte,0,len(text))
+	first := 0
+	length := 0
+	for i, data := range text {
+		_, err := strconv.Atoi(string(data))
+		if err == nil {
+			l, errW := f.writer.Write(text[first:i])
+			length += l
+			if errW != nil {
+				return length, errW
+			}
+			first = i + 1
+			// x=append(x,data)   // It doing copy
+		}
+	}
+	return length, nil
+}
+
+func main() {
+	var b bytes.Buffer
+	input:="start=1, end=10"
+	// filteringPipe := FilteringPipe{writer: &b}
+	filteringPipe := NewFilteringPipe(&b)
+	_,err:=filteringPipe.Write([]byte(input))
+	if err!=nil{
+		fmt.Fprintln(os.Stderr,err)
+		os.Exit(2)
+	}
+	fmt.Println(b.String())
+}
