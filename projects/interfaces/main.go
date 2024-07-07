@@ -58,13 +58,20 @@ func (f *FilteringPipe) Write(text []byte) (int, error) {
 	for i, data := range text {
 		_, err := strconv.Atoi(string(data))
 		if err == nil {
-			l, errW := f.writer.Write(text[first:i])
+			l, err := f.writer.Write(text[first:i])
 			length += l
-			if errW != nil {
-				return length, errW
+			if err != nil {
+				return length, err
 			}
 			first = i + 1
 			// x=append(x,data)   // It doing copy
+		}
+	}
+	if first == 0 && len(text) > 0 {
+		l, err := f.writer.Write(text)
+		length = l
+		if err != nil {
+			return l, err
 		}
 	}
 	return length, nil
@@ -72,12 +79,12 @@ func (f *FilteringPipe) Write(text []byte) (int, error) {
 
 func main() {
 	var b bytes.Buffer
-	input:="start=1, end=10"
+	input := "start=1, end=10"
 	// filteringPipe := FilteringPipe{writer: &b}
 	filteringPipe := NewFilteringPipe(&b)
-	_,err:=filteringPipe.Write([]byte(input))
-	if err!=nil{
-		fmt.Fprintln(os.Stderr,err)
+	_, err := filteringPipe.Write([]byte(input))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
 	fmt.Println(b.String())
