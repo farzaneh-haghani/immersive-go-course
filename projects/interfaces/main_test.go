@@ -56,7 +56,7 @@ func TestBuffer(t *testing.T) {
 	t.Run("Make OurByteBuffer named b containing some bytes, calling b.Bytes() returns the same bytes I created it with", func(t *testing.T) {
 		for _, test := range bufferTest {
 			var b OurByteBuffer
-			b.OurWriteString(test.text1)
+			b.Write(test.text1)
 			got := b.OurBytes()
 			want := []byte(test.text1)
 
@@ -69,8 +69,8 @@ func TestBuffer(t *testing.T) {
 	t.Run("Write some extra bytes to that buffer using b.Write(), a call to b.Bytes() returns both the initial bytes and the extra bytes", func(t *testing.T) {
 		for _, test := range bufferTest {
 			var b OurByteBuffer
-			b.OurWriteString(test.text1)
-			b.OurWriteString(test.text2)
+			b.Write(test.text1)
+			b.Write(test.text2)
 			got := b.OurBytes()
 			want := []byte(test.text1 + test.text2)
 
@@ -83,9 +83,9 @@ func TestBuffer(t *testing.T) {
 	t.Run("If I call b.Read() with a slice big enough to read all of the bytes in the buffer, all of the bytes are read.", func(t *testing.T) {
 		for _, test := range bufferTest {
 			var b OurByteBuffer
-			b.OurWriteString(test.text1)
+			b.Write(test.text1)
 			s := make([]byte, len(test.text1))
-			b.OurRead(s)
+			b.Read(s)
 			want := []byte(test.text1)
 
 			if !bytes.Equal(s, want) {
@@ -97,11 +97,11 @@ func TestBuffer(t *testing.T) {
 	t.Run("Call b.Read() with a slice smaller than the contents of the buffer, some of the bytes are read. If I call it again, the next bytes are read.", func(t *testing.T) {
 		for _, test := range bufferTest {
 			var b OurByteBuffer
-			b.OurWriteString(test.text1)
+			b.Write(test.text1)
 			s := make([]byte, test.readLength)
-			b.OurRead(s)
+			b.Read(s)
 			// s = make([]byte, test.readLength) I wanted to reset my buffer here but I got error "got `lo` but expect `lo`" ??
-			b.OurRead(s)
+			b.Read(s)
 			want := []byte(test.readOutput)
 
 			if !bytes.Equal(s, want) {

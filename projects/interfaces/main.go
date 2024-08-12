@@ -14,15 +14,14 @@ type OurByteBuffer struct {
 
 // Is there a maximum about of data an OurByteBuffer can store?
 // There is no maximum as far as our memory doesn't run out.
-// As far as I learned, buffer (bytes.buffer) can grow magically and always is the same buffer.
-// But OurByteBuffer created as a slice bytes and can grow but always not the same slice bytes.
 
 // Are there any important performance characteristics? e.g. is it much faster or slower to Write one large amount of data to it than write the same amount of data one byte at a time?
 // yes, for buffer (bytes.buffer) is always faster because working with block of data.
 // for OurByteBuffer which is a slice, it is better to append a large amount of data instead of one byte at a time to trigger the copy process less or create a slice with estimated size we need.
 
-func (b *OurByteBuffer) OurWriteString(text string) {
+func (b *OurByteBuffer) Write(text string) (n int, err error) {
 	b.myBuff = append(b.myBuff, []byte(text)...)
+	return len(text), nil
 }
 
 func (b *OurByteBuffer) OurBytes() []byte {
@@ -30,10 +29,11 @@ func (b *OurByteBuffer) OurBytes() []byte {
 }
 
 // Are there any important memory characteristics? e.g. does an OurByteBuffer always retain all data that was stored in it, or does it free some of its memory after it's been read?
-// when we read from buffer/OurByteBuffer, the pointer move on and we don't access to data read so later garbage collector will frees them as there is no reference to them.
-func (b *OurByteBuffer) OurRead(s []byte) {
+// when we read from buffer/OurByteBuffer, the pointer move on and we don't access to data read but it is not free until all bytes read.
+func (b *OurByteBuffer) Read(s []byte) (n int, err error) {
 	num := copy(s, b.myBuff)
 	b.myBuff = b.myBuff[num:]
+	return num, nil
 }
 
 // What operations are safe or unsafe to perform concurrently on an OurByteBuffer from different threads?
@@ -51,13 +51,17 @@ func NewFilteringPipe(w io.Writer) io.Writer {
 	return &f
 }
 
+func isNumber(data byte) bool {
+	_, err := strconv.Atoi(string(data))
+	return err == nil
+}
+
 func (f *FilteringPipe) Write(text []byte) (int, error) {
 	// x:=make([]byte,0,len(text))
 	first := 0
 	length := 0
 	for i, data := range text {
-		_, err := strconv.Atoi(string(data))
-		if err == nil {
+		if isNumber(data) {
 			l, err := f.writer.Write(text[first:i])
 			length += l
 			if err != nil {
