@@ -71,9 +71,9 @@ func (f *FilteringPipe) Write(text []byte) (int, error) {
 			// x=append(x,data)   // It doing copy
 		}
 	}
-	if first == 0 && len(text) > 0 {
-		l, err := f.writer.Write(text)
-		length = l
+	if first < len(text) {
+		l, err := f.writer.Write(text[first:])
+		length += l
 		if err != nil {
 			return l, err
 		}
