@@ -2,109 +2,129 @@ package main
 
 import "fmt"
 
-type Value[K comparable] struct {
-	data any
-	next *K
-	prev *K
+type Node[K comparable, V any] struct {
+	key   K
+	value V
+	next  *Node[K, V]
+	prev  *Node[K, V]
 }
 
-type Cache[K comparable] struct {
-	size  int
-	m     map[K]Value[K]
-	first *K
-	last  *K
+type List[K comparable, V any] struct {
+	first *Node[K, V]
+	last  *Node[K, V]
 }
 
-func NewCache[K comparable](entryLimit int) Cache[K] { //All K should be unique && same type && comparable type like primitive that can compare with each other
-	return Cache[K]{
-		size:  entryLimit,
-		m:     make(map[K]Value[K]),
+type Cache[K comparable, V any] struct {
+	size int
+	m    map[K]*Node[K, V]
+}
+
+func NewNode[K comparable, V any](key K, value V) *Node[K, V] {
+	return &Node[K, V]{
+		key:   key,
+		value: value,
+		next:  nil,
+		prev:  nil,
+	}
+}
+
+func NewList[K comparable, V any]() *List[K, V] {
+	return &List[K, V]{
 		first: nil,
 		last:  nil,
 	}
 }
 
-func (c *Cache[K]) Put(key K, value Value[K]) bool {
+func NewCache[K comparable, V any](entryLimit int) (Cache[K, V], *List[K, V]) { //All K should be unique && same type && comparable type like primitive that can compare with each other
+	list := NewList[K, V]()
+	return Cache[K, V]{
+		size: entryLimit,
+		m:    make(map[K]*Node[K, V]),
+	}, list
+}
 
-	if currentValue, isExisted := c.m[key]; isExisted {
-		nextKey := *currentValue.next
-		nextValue := c.m[nextKey]
+func (l *List[K, V]) addNode(key K, value V) *Node[K, V] {
+	newNode := NewNode(key, value)
+	if l.first == nil {
+		l.first = newNode
+	} else {
+		l.last.next = newNode
+		newNode.prev = l.last
+	}
+	l.last = newNode
+	return newNode
+}
 
-		if *c.first == key {
-			nextValue.prev = nil
-			*c.first = nextKey
+func (l *List[K, V]) moveNode(currentNode *Node[K, V]) {
+	if l.last != currentNode {
+		l.last.next = currentNode
+		if l.first != currentNode {
+			prevNode := currentNode.prev
+			prevNode.next = currentNode.next
+			nextNode := currentNode.next
+			nextNode.prev = currentNode.prev
 		} else {
-			nextValue.prev = currentValue.prev
-			prevKey := *currentValue.prev
-			prevValue := c.m[prevKey]
-			prevValue.next = currentValue.next
-			c.m[prevKey] = prevValue
+			l.first = currentNode.next
+			l.first.prev = nil
 		}
-		c.m[nextKey] = nextValue
-		lastValue := c.m[*c.last]
-		lastValue.next = &key
-		c.m[*c.last] = lastValue
-		currentValue.prev = c.last
-		currentValue.next = nil
-		currentValue.data = value.data
-		c.m[key] = currentValue
-		c.last = &key
+		currentNode.prev = l.last
+		l.last = currentNode
+		currentNode.next = nil
+	}
+}
+
+func (l *List[K, V]) deleteNode() K {
+	deleted := l.first.key
+	if l.first == l.last {
+		l.first = nil
+		l.last = nil
+	} else {
+		l.first = l.first.next
+		l.first.prev = nil
+	}
+	return deleted
+}
+
+func (c *Cache[K, V]) Put(key K, l *List[K, V], value V) bool {
+
+	if currentNode, isExisted := c.m[key]; isExisted {
+		currentNode.value = value
+		l.moveNode(currentNode)
+		c.m[key] = currentNode
 		return true
 	} else if len(c.m) < c.size {
-
-		if c.first == nil {
-			value.prev = nil
-			c.first = &key
-		} else {
-			oldLastValue := c.m[*c.last]
-			oldLastValue.next = &key
-			c.m[*c.last] = oldLastValue
-			value.prev = c.last
-		}
-		value.next = nil
-		c.last = &key
-		c.m[key] = value
+		newNode := l.addNode(key, value)
+		c.m[key] = newNode
 		return false
 	} else {
-		currentLastValue := c.m[*c.last]
-		currentLastValue.next = &key
-		c.m[*c.last] = currentLastValue
-
-		currentFirstValue := c.m[*c.first]
-		delete(c.m, *c.first)
-		c.first = currentFirstValue.next
-
-		value.prev = c.last
-		value.next = nil
-		c.m[key] = value
-
-		c.last = &key
+		deleted := l.deleteNode()
+		delete(c.m, deleted)
+		newNode := l.addNode(key, value)
+		c.m[key] = newNode
 		return false
 	}
 }
 
-func (c *Cache[K]) Get(key K) (*Value[K], bool) {
-	if value, isExisted := c.m[key]; isExisted {
-		return &value, true
+func (c *Cache[K, V]) Get(key K,l *List[K, V]) (*Node[K, V], bool) {
+	if currentNode, isExisted := c.m[key]; isExisted {
+		l.moveNode(currentNode)
+		return currentNode, true
 	}
 	return nil, false
 }
 
 func main() {
-	cache := NewCache[int](5)
-	newValue1 := Value[int]{data: "test"}
-	newValue2 := Value[int]{data: "test2"}
-	newValue3 := Value[int]{data: "test3"}
-	cache.Put(1, newValue1)
-	cache.Put(2, newValue2)
-	cache.Put(3, newValue1)
-	cache.Put(4, newValue1)
-	cache.Put(5, newValue2)
-	cache.Put(6, newValue3)
-	cache.Put(7, newValue3)
-	value, isExisted := cache.Get(7)
+	cache, list := NewCache[int, string](2)
+	cache.Put(1, list, "newValue1")
+	cache.Put(2, list, "newValue2")
+	cache.Put(3, list, "newValue3")
+	cache.Get(2,list)
+	cache.Put(4, list, "newValue4")
+	cache.Put(2, list, "newValue22")
+	cache.Put(5, list, "newValue5")
+	value, isExisted := cache.Get(2,list)
 	if isExisted {
-		fmt.Printf("Value is:%s", value.data)
+		fmt.Printf("Value is:%s", value.value)
 	} else {
 		fmt.Println("Value isn't exist")
 	}
