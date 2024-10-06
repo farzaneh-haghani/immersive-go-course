@@ -3,11 +3,12 @@ package main
 import "fmt"
 
 type Node[K comparable, V any] struct {
-	key              K
-	value            V
-	next             *Node[K, V]
-	prev             *Node[K, V]
-	entriesNeverRead bool
+	key         K
+	value       V
+	next        *Node[K, V]
+	prev        *Node[K, V]
+	isRead      bool //Question 2
+	entriesRead int  //Question 3
 }
 
 type List[K comparable, V any] struct {
@@ -16,20 +17,23 @@ type List[K comparable, V any] struct {
 }
 
 type Cache[K comparable, V any] struct {
-	size        int
-	m           map[K]*Node[K, V]
-	readCount   int
-	unreadCount int
-	entries     int
+	size             int
+	m                map[K]*Node[K, V]
+	readCount        int //Question 1
+	unreadCount      int //Question 1
+	entriesNeverRead int //Question 2
+	totalReadExisted int //Question 3
+	writesCount      int //Question 4
 }
 
 func NewNode[K comparable, V any](key K, value V) *Node[K, V] {
 	return &Node[K, V]{
-		key:              key,
-		value:            value,
-		next:             nil,
-		prev:             nil,
-		entriesNeverRead: false,
+		key:         key,
+		value:       value,
+		next:        nil,
+		prev:        nil,
+		isRead:      false,
+		entriesRead: 0,
 	}
 }
 
@@ -43,11 +47,13 @@ func NewList[K comparable, V any]() *List[K, V] {
 func NewCache[K comparable, V any](entryLimit int) (Cache[K, V], *List[K, V]) { //All K should be unique && same type && comparable type like primitive that can compare with each other
 	list := NewList[K, V]()
 	return Cache[K, V]{
-		size:        entryLimit,
-		m:           make(map[K]*Node[K, V]),
-		readCount:   0,
-		unreadCount: 0,
-		entries:     0,
+		size:             entryLimit,
+		m:                make(map[K]*Node[K, V]),
+		readCount:        0,
+		unreadCount:      0,
+		entriesNeverRead: 0,
+		totalReadExisted: 0,
+		writesCount:      0,
 	}, list
 }
 
@@ -81,8 +87,9 @@ func (l *List[K, V]) moveNode(currentNode *Node[K, V]) {
 	}
 }
 
-func (l *List[K, V]) deleteNode() K {
+func (l *List[K, V]) deleteNode() (K, int) {
 	deleted := l.first.key
+	entriesRead := l.first.entriesRead
 	if l.first == l.last {
 		l.first = nil
 		l.last = nil
@@ -90,22 +97,23 @@ func (l *List[K, V]) deleteNode() K {
 		l.first = l.first.next
 		l.first.prev = nil
 	}
-	return deleted
+	return deleted, entriesRead
 }
 
 func (c *Cache[K, V]) Put(key K, l *List[K, V], value V) bool {
-
 	if currentNode, isExisted := c.m[key]; isExisted {
 		currentNode.value = value
 		l.moveNode(currentNode)
 		return true
 	} else if len(c.m) >= c.size {
-		deleted := l.deleteNode()
+		deleted, entriesRead := l.deleteNode()
 		delete(c.m, deleted)
+		c.totalReadExisted -= entriesRead
 	}
 	newNode := l.addNode(key, value)
 	c.m[key] = newNode
-	c.entries++
+	c.entriesNeverRead++
+	c.writesCount++
 	return false
 }
 
@@ -113,9 +121,11 @@ func (c *Cache[K, V]) Get(key K, l *List[K, V]) (*Node[K, V], bool) {
 	if currentNode, isExisted := c.m[key]; isExisted {
 		l.moveNode(currentNode)
 		c.readCount++
-		if currentNode.entriesNeverRead == false {
-			currentNode.entriesNeverRead = true
-			c.entries--
+		c.totalReadExisted++
+		currentNode.entriesRead++
+		if currentNode.isRead == false {
+			currentNode.isRead = true
+			c.entriesNeverRead--
 		}
 		return currentNode, true
 	}
@@ -124,7 +134,7 @@ func (c *Cache[K, V]) Get(key K, l *List[K, V]) (*Node[K, V], bool) {
 }
 
 func main() {
-	cache, list := NewCache[int, string](2)
+	cache, list := NewCache[int, string](4)
 	cache.Put(1, list, "newValue1")
 	cache.Put(2, list, "newValue2")
 	cache.Put(3, list, "newValue3")
@@ -142,5 +152,7 @@ func main() {
 	} else {
 		fmt.Printf("Hit rate:%d\n", cache.readCount/totalHit*100)
 	}
-	fmt.Printf("Entries were written to the cache and have never been read: %d\n", cache.entries)
+	fmt.Printf("Entries were written to the cache and have never been read: %d\n", cache.entriesNeverRead)
+	fmt.Printf("Average number of times that things currently in the cache is read: %.2f\n", float64(cache.totalReadExisted)/float64(len(cache.m)))
+	fmt.Printf("Total reads and writes have been performed in the cache including evicted: %d\n", cache.readCount+cache.writesCount)
 }
