@@ -84,25 +84,26 @@ func (l *List[K, V]) addNode(key K, value V) *Node[K, V] {
 	return newNode
 }
 
-func (l *List[K, V]) moveNode(currentNode *Node[K, V]) {
-	if l.last != currentNode {
-		l.last.next = currentNode
-		if l.first != currentNode {
-			prevNode := currentNode.prev
-			prevNode.next = currentNode.next
-			nextNode := currentNode.next
-			nextNode.prev = currentNode.prev
-		} else {
-			l.first = currentNode.next
-			l.first.prev = nil
-		}
-		currentNode.prev = l.last
-		l.last = currentNode
-		currentNode.next = nil
+func (l *List[K, V]) moveNodeToLast(currentNode *Node[K, V]) {
+	if l.last == currentNode {
+		return
 	}
+	l.last.next = currentNode
+	if l.first != currentNode {
+		prevNode := currentNode.prev
+		prevNode.next = currentNode.next
+		nextNode := currentNode.next
+		nextNode.prev = currentNode.prev
+	} else {
+		l.first = currentNode.next
+		l.first.prev = nil
+	}
+	currentNode.prev = l.last
+	l.last = currentNode
+	currentNode.next = nil
 }
 
-func (l *List[K, V]) deleteNode() (K, int) {
+func (l *List[K, V]) deleteFirstNode() (K, int) {
 	deleted := l.first.key
 	entriesRead := l.first.entriesRead
 	if l.first == l.last {
@@ -117,13 +118,13 @@ func (l *List[K, V]) deleteNode() (K, int) {
 
 func (c *Cache[K, V]) Put(key K, value V) bool {
 	c.rwm.Lock()
+	defer c.rwm.Unlock()
 	if currentNode, isExisted := c.m[key]; isExisted {
 		currentNode.value = value
-		c.l.moveNode(currentNode)
-		c.rwm.Unlock()
+		c.l.moveNodeToLast(currentNode)
 		return true
 	} else if len(c.m) >= c.size {
-		deleted, entriesRead := c.l.deleteNode()
+		deleted, entriesRead := c.l.deleteFirstNode()
 		delete(c.m, deleted)
 		c.s.totalReadExisted -= entriesRead
 	}
@@ -131,14 +132,14 @@ func (c *Cache[K, V]) Put(key K, value V) bool {
 	c.m[key] = newNode
 	c.s.entriesNeverRead++
 	c.s.writesCount++
-	c.rwm.Unlock()
 	return false
 }
 
 func (c *Cache[K, V]) Get(key K) (*V, bool) {
 	c.rwm.RLock()
+	defer c.rwm.RUnlock()
 	if currentNode, isExisted := c.m[key]; isExisted {
-		c.l.moveNode(currentNode)
+		c.l.moveNodeToLast(currentNode)
 		c.s.readCount++
 		c.s.totalReadExisted++
 		currentNode.entriesRead++
@@ -146,19 +147,16 @@ func (c *Cache[K, V]) Get(key K) (*V, bool) {
 			currentNode.isRead = true
 			c.s.entriesNeverRead--
 		}
-		c.rwm.RUnlock()
 		return &currentNode.value, true
 	}
 	c.s.unreadCount++
-	c.rwm.RUnlock()
 	return nil, false
 }
 
-var wg sync.WaitGroup
-
 func main() {
+	var wg sync.WaitGroup
 	cache := NewCache[int, string](4)
-	wg.Add(7)
+	wg.Add(3)
 	go func() {
 		cache.Put(1, "newValue1")
 		wg.Done()
@@ -171,6 +169,8 @@ func main() {
 		cache.Put(3, "newValue3")
 		wg.Done()
 	}()
+	wg.Wait()
+	wg.Add(4)
 	go func() {
 		cache.Get(2)
 		wg.Done()
