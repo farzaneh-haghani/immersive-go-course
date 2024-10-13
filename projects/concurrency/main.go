@@ -1,23 +1,10 @@
 package main
 
 import (
+	"concurrency/list"
 	"fmt"
 	"sync"
 )
-
-type Node[K comparable, V any] struct {
-	key         K
-	value       V
-	next        *Node[K, V]
-	prev        *Node[K, V]
-	isRead      bool //Question 2
-	entriesRead int  //Question 3
-}
-
-type List[K comparable, V any] struct {
-	first *Node[K, V]
-	last  *Node[K, V]
-}
 
 type static struct {
 	readCount        int //Question 1
@@ -28,28 +15,10 @@ type static struct {
 }
 type Cache[K comparable, V any] struct {
 	size int
-	m    map[K]*Node[K, V]
-	l    List[K, V]
+	m    map[K]*list.Node[K, V]
+	l    list.List[K, V]
 	s    static
-	rwm  sync.RWMutex
-}
-
-func NewNode[K comparable, V any](key K, value V) *Node[K, V] {
-	return &Node[K, V]{
-		key:         key,
-		value:       value,
-		next:        nil,
-		prev:        nil,
-		isRead:      false,
-		entriesRead: 0,
-	}
-}
-
-func NewList[K comparable, V any]() *List[K, V] {
-	return &List[K, V]{
-		first: nil,
-		last:  nil,
-	}
+	mu   sync.Mutex
 }
 
 func NewStatic() *static {
@@ -63,72 +32,27 @@ func NewStatic() *static {
 }
 
 func NewCache[K comparable, V any](entryLimit int) Cache[K, V] { //All K should be unique && same type && comparable type like primitive that can compare with each other
-
 	return Cache[K, V]{
 		size: entryLimit,
-		m:    make(map[K]*Node[K, V]),
-		l:    *NewList[K, V](),
+		m:    make(map[K]*list.Node[K, V]),
+		l:    *list.NewList[K, V](),
 		s:    *NewStatic(),
 	}
 }
 
-func (l *List[K, V]) addNode(key K, value V) *Node[K, V] {
-	newNode := NewNode(key, value)
-	if l.first == nil {
-		l.first = newNode
-	} else {
-		l.last.next = newNode
-		newNode.prev = l.last
-	}
-	l.last = newNode
-	return newNode
-}
-
-func (l *List[K, V]) moveNodeToLast(currentNode *Node[K, V]) {
-	if l.last == currentNode {
-		return
-	}
-	l.last.next = currentNode
-	if l.first != currentNode {
-		prevNode := currentNode.prev
-		prevNode.next = currentNode.next
-		nextNode := currentNode.next
-		nextNode.prev = currentNode.prev
-	} else {
-		l.first = currentNode.next
-		l.first.prev = nil
-	}
-	currentNode.prev = l.last
-	l.last = currentNode
-	currentNode.next = nil
-}
-
-func (l *List[K, V]) deleteFirstNode() (K, int) {
-	deleted := l.first.key
-	entriesRead := l.first.entriesRead
-	if l.first == l.last {
-		l.first = nil
-		l.last = nil
-	} else {
-		l.first = l.first.next
-		l.first.prev = nil
-	}
-	return deleted, entriesRead
-}
-
 func (c *Cache[K, V]) Put(key K, value V) bool {
-	c.rwm.Lock()
-	defer c.rwm.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if currentNode, isExisted := c.m[key]; isExisted {
-		currentNode.value = value
-		c.l.moveNodeToLast(currentNode)
+		currentNode.Value = value
+		c.l.MoveNodeToLast(currentNode)
 		return true
 	} else if len(c.m) >= c.size {
-		deleted, entriesRead := c.l.deleteFirstNode()
+		deleted, entriesRead := c.l.DeleteFirstNode()
 		delete(c.m, deleted)
 		c.s.totalReadExisted -= entriesRead
 	}
-	newNode := c.l.addNode(key, value)
+	newNode := c.l.AddNode(key, value)
 	c.m[key] = newNode
 	c.s.entriesNeverRead++
 	c.s.writesCount++
@@ -136,21 +60,26 @@ func (c *Cache[K, V]) Put(key K, value V) bool {
 }
 
 func (c *Cache[K, V]) Get(key K) (*V, bool) {
-	c.rwm.RLock()
-	defer c.rwm.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if currentNode, isExisted := c.m[key]; isExisted {
-		c.l.moveNodeToLast(currentNode)
+		c.l.MoveNodeToLast(currentNode)
 		c.s.readCount++
 		c.s.totalReadExisted++
-		currentNode.entriesRead++
-		if currentNode.isRead == false {
-			currentNode.isRead = true
+		currentNode.EntriesRead++
+		if !currentNode.IsRead {
+			currentNode.IsRead = true
 			c.s.entriesNeverRead--
 		}
-		return &currentNode.value, true
+		return &currentNode.Value, true
 	}
 	c.s.unreadCount++
 	return nil, false
+}
+
+func hitRate(readCount int, unreadCount int) float32 {
+	totalHit := readCount + unreadCount
+	return float32(readCount) / float32(totalHit) * 100
 }
 
 func main() {
@@ -198,12 +127,13 @@ func main() {
 		wg.Done()
 	}()
 	wg.Wait()
-	if totalHit := cache.s.readCount + cache.s.unreadCount; totalHit == 0 {
+	hitRate := hitRate(cache.s.readCount, cache.s.unreadCount)
+	if hitRate == 0 {
 		fmt.Println("Never have had any read from this cache!")
 	} else {
-		fmt.Printf("Hit rate:%.2f\n", float64(cache.s.readCount)/float64(totalHit)*100)
+		fmt.Printf("Hit rate:%.2f\n", hitRate)
 	}
 	fmt.Printf("Entries were written to the cache and have never been read: %d\n", cache.s.entriesNeverRead)
-	fmt.Printf("Average number of times that things currently in the cache is read: %.2f\n", float64(cache.s.totalReadExisted)/float64(len(cache.m)))
+	fmt.Printf("Average number of times that things currently in the cache is read: %.2f\n", float32(cache.s.totalReadExisted)/float32(len(cache.m)))
 	fmt.Printf("Total reads and writes have been performed in the cache including evicted: %d\n", cache.s.readCount+cache.s.writesCount)
 }
