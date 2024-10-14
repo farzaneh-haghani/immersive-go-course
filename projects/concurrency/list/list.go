@@ -32,7 +32,7 @@ func NewList[K comparable, V any]() *List[K, V] {
 	}
 }
 
-func (l *List[K, V]) AddNode(key K, value V) *Node[K, V] {
+func (l *List[K, V]) AddNodeToLast(key K, value V) *Node[K, V] {
 	newNode := NewNode(key, value)
 	if l.first == nil {
 		l.first = newNode

@@ -94,7 +94,7 @@ func (c *CustomCache[K]) deleteFirstValue() int {
 	return entriesRead
 }
 
-func (c *CustomCache[K]) addValue(key K, value any) {
+func (c *CustomCache[K]) addValueToLast(key K, value any) {
 	newValue := NewCustomValue[K](value)
 
 	if c.first == nil {
@@ -123,7 +123,7 @@ func (c *CustomCache[K]) Put(key K, value any) bool {
 		entriesRead := c.deleteFirstValue()
 		c.S.TotalReadExisted -= entriesRead
 	}
-	c.addValue(key, value)
+	c.addValueToLast(key, value)
 	c.S.EntriesNeverRead++
 	c.S.WritesCount++
 	return false

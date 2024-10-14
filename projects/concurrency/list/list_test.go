@@ -6,20 +6,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAddNode(t *testing.T) {
+func TestAddNodeToLast(t *testing.T) {
 
 	t.Run("Test a link list", func(t *testing.T) {
 		l := NewList[int, string]()
 		require.Equal(t, l.first, l.last)
 
-		newNode1 := l.AddNode(1, "test1")
+		newNode1 := l.AddNodeToLast(1, "test1")
 		require.Equal(t, newNode1.key, 1)
 		require.Equal(t, newNode1.Value, "test1")
 		require.Equal(t, l.first, newNode1)
 		require.Equal(t, l.first, l.last)
 		require.Equal(t, newNode1.next, newNode1.prev)
 
-		newNode2 := l.AddNode(2, "test2")
+		newNode2 := l.AddNodeToLast(2, "test2")
 		require.Equal(t, newNode2.key, 2)
 		require.Equal(t, newNode2.Value, "test2")
 		require.Equal(t, l.first, newNode1)
@@ -46,5 +46,7 @@ func TestAddNode(t *testing.T) {
 		require.Equal(t, deleted2, 1)
 		require.NotEqual(t, l.first, newNode1)
 		require.Equal(t, l.first, l.last)
+		require.Nil(t,l.first)
+		require.Nil(t,l.last)
 	})
 }

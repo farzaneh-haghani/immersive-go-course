@@ -15,7 +15,7 @@ type Static struct {
 }
 
 type Cache[K comparable, V any] struct {
-	size int
+	Size int
 	m    map[K]*list.Node[K, V]
 	l    list.List[K, V]
 	S    Static
@@ -34,7 +34,7 @@ func NewStatic() *Static {
 
 func NewCache[K comparable, V any](entryLimit int) Cache[K, V] { //All K should be unique && same type && comparable type like primitive that can compare with each other
 	return Cache[K, V]{
-		size: entryLimit,
+		Size: entryLimit,
 		m:    make(map[K]*list.Node[K, V]),
 		l:    *list.NewList[K, V](),
 		S:    *NewStatic(),
@@ -48,12 +48,12 @@ func (c *Cache[K, V]) Put(key K, value V) bool {
 		currentNode.Value = value
 		c.l.MoveNodeToLast(currentNode)
 		return true
-	} else if len(c.m) >= c.size {
+	} else if len(c.m) >= c.Size {
 		deleted, entriesRead := c.l.DeleteFirstNode()
 		delete(c.m, deleted)
 		c.S.TotalReadExisted -= entriesRead
 	}
-	newNode := c.l.AddNode(key, value)
+	newNode := c.l.AddNodeToLast(key, value)
 	c.m[key] = newNode
 	c.S.EntriesNeverRead++
 	c.S.WritesCount++
@@ -61,6 +61,7 @@ func (c *Cache[K, V]) Put(key K, value V) bool {
 }
 
 func (c *Cache[K, V]) Get(key K) (*V, bool) {
+	// c.rwm.RLock() is not safe because we are not just reading, we move the node as well, Also RWMutex is good when we use read more than write to make it faster. but when we write more than read, it makes it slower because it always should check RLock extra.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if currentNode, isExisted := c.m[key]; isExisted {
