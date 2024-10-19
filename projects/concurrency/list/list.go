@@ -1,12 +1,15 @@
 package list
 
-type Node[K comparable, V any] struct {
+type Entry[K comparable, V any] struct {
 	key         K
 	Value       V
-	next        *Node[K, V]
-	prev        *Node[K, V]
 	IsRead      bool //Question 2
 	EntriesRead int  //Question 3
+}
+type Node[K comparable, V any] struct {
+	Data Entry[K, V]
+	next *Node[K, V]
+	prev *Node[K, V]
 }
 
 type List[K comparable, V any] struct {
@@ -14,14 +17,20 @@ type List[K comparable, V any] struct {
 	last  *Node[K, V]
 }
 
-func NewNode[K comparable, V any](key K, value V) *Node[K, V] {
-	return &Node[K, V]{
+func NewEntry[K comparable, V any](key K, value V) Entry[K, V] {
+	return Entry[K, V]{
 		key:         key,
 		Value:       value,
-		next:        nil,
-		prev:        nil,
 		IsRead:      false,
 		EntriesRead: 0,
+	}
+}
+
+func NewNode[K comparable, V any](key K, value V) *Node[K, V] {
+	return &Node[K, V]{
+		Data: NewEntry(key, value),
+		next: nil,
+		prev: nil,
 	}
 }
 
@@ -33,7 +42,7 @@ func NewList[K comparable, V any]() *List[K, V] {
 }
 
 func (l *List[K, V]) AddNodeToLast(key K, value V) *Node[K, V] {
-	newNode := NewNode(key, value)
+	newNode := NewNode[K, V](key, value)
 	if l.first == nil {
 		l.first = newNode
 	} else {
@@ -64,8 +73,8 @@ func (l *List[K, V]) MoveNodeToLast(currentNode *Node[K, V]) {
 }
 
 func (l *List[K, V]) DeleteFirstNode() (K, int) {
-	deleted := l.first.key
-	entriesRead := l.first.EntriesRead
+	deleted := l.first.Data.key
+	entriesRead := l.first.Data.EntriesRead
 	if l.first == l.last {
 		l.first = nil
 		l.last = nil
