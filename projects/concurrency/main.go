@@ -2,6 +2,7 @@ package main
 
 import (
 	"concurrency/cache"
+	computingCache "concurrency/computing-cache"
 	customCache "concurrency/custom-cache"
 	"fmt"
 	"sync"
@@ -12,6 +13,9 @@ func main() {
 	length := 4
 	cache := cache.NewCache[int, string](length)
 	customCache := customCache.NewCustomCache[int](length)
+	computingCache := computingCache.NewComputingCache[int, any](length, computingCache.Creator[int])
+	result := computingCache.Get(1)
+	fmt.Println(result)
 
 	wg.Add(3)
 	go func() {
