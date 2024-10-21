@@ -3,6 +3,7 @@ package cache
 import (
 	"concurrency/list"
 	"fmt"
+	"io"
 	"sync"
 )
 
@@ -80,16 +81,20 @@ func (c *Cache[K, V]) Get(key K) (*V, bool) {
 	return nil, false
 }
 
-func (c *Cache[K, V]) PrintStatics(static Static, length int) {
+func (c *Cache[K, V]) PrintStatics(w io.Writer, static Static, length int) {
 	totalHit := static.ReadCount + static.UnreadCount
 	hitRate := float32(static.ReadCount) / float32(totalHit) * 100
 	if hitRate == 0 {
-		fmt.Println("Never have had any read from this cache!")
+		io.WriteString(w, "Never have had any read from this cache!")
 	} else {
-		fmt.Printf("Hit rate:%.2f\n", hitRate)
+		hit := fmt.Sprintf("Hit rate: %.2f\n", hitRate)
+		io.WriteString(w, hit)
 	}
-	fmt.Printf("Entries were written to the cache and have never been read: %d\n", static.EntriesNeverRead)
-	fmt.Printf("Average number of times that things currently in the cache is read: %.2f\n", float32(static.TotalReadExisted)/float32(length))
-	fmt.Printf("Total reads and writes have been performed in the cache including evicted: %d\n", static.ReadCount+static.WritesCount)
 
+	entries := fmt.Sprintf("Entries were written to the cache and have never been read: %d\n", static.EntriesNeverRead)
+	io.WriteString(w, entries)
+	avg := fmt.Sprintf("Average number of times that things currently in the cache is read: %.2f\n", float32(static.TotalReadExisted)/float32(length))
+	io.WriteString(w, avg)
+	total := fmt.Sprintf("Total reads and writes have been performed in the cache including evicted: %d\n", static.ReadCount+static.WritesCount)
+	io.WriteString(w, total)
 }

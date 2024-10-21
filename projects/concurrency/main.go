@@ -5,6 +5,7 @@ import (
 	computingCache "concurrency/computing-cache"
 	customCache "concurrency/custom-cache"
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -15,7 +16,7 @@ func main() {
 	customCache := customCache.NewCustomCache[int](length)
 	computingCache := computingCache.NewComputingCache[int, any](length, computingCache.Creator[int])
 	result := computingCache.Get(1)
-	fmt.Println(result)
+	fmt.Printf("Value of computing cache is: %s\n", result)
 
 	wg.Add(3)
 	go func() {
@@ -74,7 +75,7 @@ func main() {
 	wg.Wait()
 
 	fmt.Println("Statics for cache:")
-	cache.PrintStatics(cache.S, length)
+	cache.PrintStatics(os.Stdout, cache.S, length)
 	fmt.Println("Statics for custom cache:")
-	cache.PrintStatics(customCache.S, length)
+	cache.PrintStatics(os.Stdout, customCache.S, length)
 }
