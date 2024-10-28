@@ -18,7 +18,7 @@ type Static struct {
 type Cache[K comparable, V any] struct {
 	Size int
 	M    map[K]*list.Node[K, V]
-	L    list.List[K, V]
+	l    list.List[K, V]
 	S    Static
 	mu   sync.Mutex
 }
@@ -37,7 +37,7 @@ func NewCache[K comparable, V any](entryLimit int) Cache[K, V] { //All K should 
 	return Cache[K, V]{
 		Size: entryLimit,
 		M:    make(map[K]*list.Node[K, V]),
-		L:    *list.NewList[K, V](),
+		l:    *list.NewList[K, V](),
 		S:    *NewStatic(),
 	}
 }
@@ -47,15 +47,15 @@ func (c *Cache[K, V]) Put(key K, value V) bool {
 	defer c.mu.Unlock()
 	if currentNode, isExisted := c.M[key]; isExisted {
 		currentNode.Data.Value = value
-		c.L.MoveNodeToLast(currentNode)
+		c.l.MoveNodeToLast(currentNode)
 		return true
 	}
 	if len(c.M) >= c.Size {
-		deleted, entriesRead := c.L.DeleteFirstNode()
+		deleted, entriesRead := c.l.DeleteFirstNode()
 		delete(c.M, deleted)
 		c.S.TotalReadExisted -= entriesRead
 	}
-	newNode := c.L.AddNodeToLast(key, value)
+	newNode := c.l.AddNodeToLast(key, value)
 	c.M[key] = newNode
 	c.S.EntriesNeverRead++
 	c.S.WritesCount++
@@ -67,7 +67,7 @@ func (c *Cache[K, V]) Get(key K) (*V, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if currentNode, isExisted := c.M[key]; isExisted {
-		c.L.MoveNodeToLast(currentNode)
+		c.l.MoveNodeToLast(currentNode)
 		c.S.ReadCount++
 		c.S.TotalReadExisted++
 		currentNode.Data.EntriesRead++
