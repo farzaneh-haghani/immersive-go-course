@@ -14,24 +14,28 @@ func main() {
 	length := 4
 	cache := cache.NewCache[int, string](length)
 	customCache := customCache.NewCustomCache[int](length)
-	computingCache := computingCache.NewComputingCache[int, any](length, computingCache.Creator[int])
-	result := computingCache.Get(1)
-	fmt.Printf("Value of computing cache is: %s\n", result)
+	computingCache := computingCache.NewComputingCache[int, string](length, computingCache.Creator[int])
 
 	wg.Add(3)
 	go func() {
 		cache.Put(1, "newValue1")
 		customCache.Put(1, "newValue1")
+		result := computingCache.Get(1)
+		fmt.Println("Value of first request computing cache", result)
 		wg.Done()
 	}()
 	go func() {
 		cache.Put(2, "newValue2")
 		customCache.Put(2, "newValue2")
+		result := computingCache.Get(1)
+		fmt.Println("Value of second request computing cache", result)
 		wg.Done()
 	}()
 	go func() {
 		cache.Put(3, "newValue3")
 		customCache.Put(3, "newValue3")
+		result := computingCache.Get(1)
+		fmt.Println("Value of third request computing cache", result)
 		wg.Done()
 	}()
 	wg.Wait()

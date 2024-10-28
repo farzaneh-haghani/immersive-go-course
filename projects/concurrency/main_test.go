@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"concurrency/cache"
+	computingCache "concurrency/computing-cache"
 	"sync"
 	"testing"
 
@@ -15,16 +16,21 @@ func TestCache(t *testing.T) {
 		var wg sync.WaitGroup
 		length := 3
 		cache := cache.NewCache[int, int](length) // Create a cache
+		computingCache := computingCache.NewComputingCache[int, string](length, computingCache.Creator[int])
 
+		var computingCacheValue string
 		for i := 1; i < 4; i++ {
 			wg.Add(1)
 			go func() {
 				cache.Put(i, i+5) // Put in the cache by 3 go routines
+				computingCacheValue = computingCache.Get(1)
 				wg.Done()
 			}()
 		}
 
 		wg.Wait()
+		require.Equal(t, computingCacheValue, "NewComputingCacheValue")
+
 		wg.Add(2)
 		go func() {
 			value, isExisted := cache.Get(1) // Get from the cache
@@ -70,7 +76,7 @@ func TestCache(t *testing.T) {
 			wg.Done()
 		}()
 		wg.Wait()
-		
+
 		value, isExisted := cache.Get(1)
 		require.Equal(t, *value, 11)
 		require.Equal(t, isExisted, true)
