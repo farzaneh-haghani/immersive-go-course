@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/tidwall/go-node"
+	"github.com/xwb1989/sqlparser"
 )
 
 func main() {
@@ -40,17 +41,25 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Can't read: %s", err)
 		}
 
-		resultName := records[1][0]
-		resultScore, _ := strconv.Atoi(records[1][1])
-		for i := 2; i < len(records); i++ {
-			score, _ := strconv.Atoi(records[i][1])
-			if strings.Contains(args[1], "DESC") && score > resultScore ||
-				strings.Contains(args[1], "ASC") && score < resultScore {
-				resultScore = score
-				resultName = records[i][0]
-			}
+		stmt, err := sqlparser.Parse(args[1])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Can't read: %s", err)
 		}
-		fmt.Println("+--------+------------+\n|  name  | high score |\n+--------+------------+\n|", resultName, "|", resultScore, "       |\n+--------+------------+")
-		// I couldn't find any tools to run query on csv not in the terminal. I think the only way is putting csv to sqlite, then run query.
+
+		switch stmt.(type) {
+		case *sqlparser.Select:
+			resultName := records[1][0]
+			resultScore, _ := strconv.Atoi(records[1][1])
+			for i := 2; i < len(records); i++ {
+				score, _ := strconv.Atoi(records[i][1])
+				if strings.Contains(args[1], "DESC") && score > resultScore ||
+					strings.Contains(args[1], "ASC") && score < resultScore {
+					resultScore = score
+					resultName = records[i][0]
+				}
+			}
+			fmt.Println("+--------+------------+\n|  name  | high score |\n+--------+------------+\n|", resultName, "|", resultScore, "       |\n+--------+------------+")
+			// I couldn't find any tools to run query on csv not in the terminal. I think the only way is putting csv to sqlite, then run query.
+		}
 	}
 }
