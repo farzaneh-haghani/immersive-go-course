@@ -7,17 +7,7 @@ import (
 	"strings"
 )
 
-func jsonStruct(fileName string) []score {
-	_, err := os.Open(fileName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "can't open: %s", err)
-		os.Exit(2)
-	}
-	text, err := os.ReadFile("examples/json.txt")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "can't read: %s", err)
-		os.Exit(2)
-	}
+func jsonStruct(text []byte) []score {
 
 	textTrim := strings.Trim(string(text), "[]\n")
 	textSlice := strings.Split(string(textTrim), "\n")

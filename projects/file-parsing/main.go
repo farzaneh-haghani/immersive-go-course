@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 type score struct {
 	Name       string `json:"name"`
@@ -8,7 +11,21 @@ type score struct {
 }
 
 func main() {
-	result := jsonStruct("examples/json.txt")
-	fmt.Println(result)
-	result = csvStruct("examples/data.csv")
+	files := []string{"examples/json.txt", "examples/data.csv"}
+	for i, file := range files {
+		text, err := os.ReadFile(file)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "can't read: %s", err)
+			os.Exit(2)
+		}
+		switch i {
+		case 0:
+			result := jsonStruct(text)
+			fmt.Println(result)
+		case 1:
+			result := csvStruct(text)
+			fmt.Println(result)
+		}
+
+	}
 }
