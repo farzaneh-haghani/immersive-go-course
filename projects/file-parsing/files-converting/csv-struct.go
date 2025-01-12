@@ -22,7 +22,7 @@ func CsvToStruct(textByte []byte) []score {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "can't convert to number: %s", err)
 		}
-		s := score{Name: records[i][0], High_score: highScore}
+		s := score{Name: records[i][0], High_score: int32(highScore)}
 		result = append(result, s)
 	}
 	return result

@@ -9,9 +9,8 @@ import (
 
 type score struct {
 	Name       string
-	High_score int
+	High_score int32
 }
-
 
 func JsonToStruct(textByte []byte) []score {
 	result := []score{}

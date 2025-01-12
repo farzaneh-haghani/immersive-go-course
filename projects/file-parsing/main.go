@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	files := []string{"examples/json.txt", "examples/data.csv", "examples/repeated-json.txt", "examples/custom-binary-le.bin"}
+	files := []string{"examples/json.txt", "examples/data.csv", "examples/repeated-json.txt", "examples/custom-binary-le.bin", "examples/custom-binary-be.bin"}
 	for i, file := range files {
 		textByte, err := os.ReadFile(file)
 		if err != nil {
@@ -25,7 +25,11 @@ func main() {
 			result := filesConverting.RepeatedJsonToStruct(textByte)
 			fmt.Println(result)
 		case 3:
-			filesConverting.CustomBinaryToStruct(textByte)
+			result := filesConverting.CustomBinaryToStruct(textByte)
+			fmt.Println(result)
+		case 4:
+			result := filesConverting.CustomBinaryToStruct(textByte)
+			fmt.Println(result)
 		}
 	}
 }
