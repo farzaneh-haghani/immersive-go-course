@@ -7,18 +7,24 @@ import (
 	"strings"
 )
 
-func RepeatedJsonToStruct(textByte []byte) []score {
-	result := []score{}
-	s := score{}
+type Score struct {
+	Name       string
+	High_Score int32
+}
 
-	textTrimmed := strings.Trim(string(textByte), "\n")
+func JsonToStruct(textByte []byte) []Score {
+	result := []Score{}
+	s := Score{}
+
+	textTrimmed := strings.Trim(string(textByte), "[]\n")
 	textSliced := strings.Split(string(textTrimmed), "\n")
 
 	for _, text := range textSliced {
+		text = strings.Trim(text, ",")
 		if string(text[0]) != "#" {
-			err := json.Unmarshal([]byte(text), &s)
-			if err != nil {
+			if err := json.Unmarshal([]byte(text), &s); err != nil {
 				fmt.Fprintf(os.Stderr, "can't unmarshal: %s", err)
+				os.Exit(2)
 			}
 			result = append(result, s)
 		}

@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-func CsvToStruct(textByte []byte) []score {
-	result := []score{}
+func CsvToStruct(textByte []byte) []Score {
+	result := []Score{}
+	s := Score{}
 
 	r := csv.NewReader(strings.NewReader(string(textByte)))
 	records, err := r.ReadAll()
@@ -22,7 +23,8 @@ func CsvToStruct(textByte []byte) []score {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "can't convert to number: %s", err)
 		}
-		s := score{Name: records[i][0], High_score: int32(highScore)}
+		s.Name = records[i][0]
+		s.High_Score = int32(highScore)
 		result = append(result, s)
 	}
 	return result
