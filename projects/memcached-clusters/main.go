@@ -3,64 +3,86 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
-type item struct {
-	key   string
-	value string
-	ttl   int32
-}
+// (Sharding)      go run . --mcrouter=11211 --memcacheds=11212,11213
+// (Replicated)    go run . --mcrouter=11211 --memcacheds=11212,11213,11214
 
 func main() {
+	countOfKeys := 1000
 
-	myItem := item{
-		key:   "0",
-		value: "4",
-		ttl:   60,
-	}
-	replicated := true
-	sharding := false
-
-	mcLeaderPortString := flag.String("mcrouter", "", "Port of leader")
-	mcFollowersPortString := flag.String("memcacheds", "", "Ports of followers")
+	leaderPort := flag.String("mcrouter", "", "Port of leader")
+	followersPort := flag.String("memcacheds", "", "Port of followers")
 	flag.Parse()
 	flag.Args()
 
-	mcFollowersSlice := strings.Split(*mcFollowersPortString, ",")
+	listOfFollowersPort := strings.Split(*followersPort, ",")
 
-	address := fmt.Sprintf("localhost:%s", *mcLeaderPortString)
-	mc := memcache.New(address)
-	if err := mc.Set(&memcache.Item{Key: myItem.key, Value: []byte(myItem.value), Expiration: myItem.ttl}); err != nil {
-		fmt.Printf("Can't set a value: %s",err)
-		return
+	for i := 0; i < countOfKeys; i++ {
+		myItem := memcache.Item{
+			Key:        fmt.Sprint(i),
+			Value:      []byte(fmt.Sprint(i)),
+			Expiration: 60,
+		}
+
+		address := fmt.Sprintf("localhost:%s", *leaderPort)
+		mc := memcache.New(address)
+		if err := mc.Set(&memcache.Item{Key: myItem.Key, Value: myItem.Value, Expiration: myItem.Expiration}); err != nil {
+			fmt.Fprintf(os.Stderr, "Can't set a value: %s", err)
+			os.Exit(52) //The server did not reply anything, which here is considered an error.
+		}
 	}
-
 	for i := 0; i < 2; i++ { // Just for testing TTL
+		countOfKeysInFollowers := []int{}
+		replicated := true
+		sharding := false
 
-		for _, v := range mcFollowersSlice {
-			address := fmt.Sprintf("localhost:%s", v)
+		for _, eachFollower := range listOfFollowersPort {
+			count := 0
+			address := fmt.Sprintf("localhost:%s", eachFollower)
 			mc := memcache.New(address)
 
-			r, err := mc.Get(myItem.key)
+			for i := 0; i < countOfKeys; i++ {
+				r, err := mc.Get(fmt.Sprint(i))
 
-			if err != nil {
-				replicated = false
-			} else if myItem.value == string(r.Value) {
-				sharding = true
-			} else if myItem.value != string(r.Value) {
-				replicated = false
+				if err != nil { // memcache: cache miss
+					replicated = false
+				} else if string(r.Value) == fmt.Sprint(i) {
+					sharding = true
+					count++
+				} else {
+					replicated = false
+				}
 			}
+			countOfKeysInFollowers = append(countOfKeysInFollowers, count)
 		}
+
 		if replicated {
 			fmt.Println("replicated")
 		} else if sharding {
-			fmt.Println("sharded")
+			isGood := true
+
+			for i, countOfKeysInEachFollower := range countOfKeysInFollowers {
+				percent := float64(countOfKeysInEachFollower) / float64(countOfKeys) * 100
+				fmt.Printf("%.2f %% in server %d\n", percent, i)
+				if math.Abs(percent-float64(100/len(listOfFollowersPort))) > 10 {
+					isGood = false
+				}
+			}
+			if isGood {
+				fmt.Println("Good Sharded")
+			} else {
+				fmt.Println("Bad Sharded")
+			}
+
 		} else {
-			fmt.Println("non")
+			fmt.Println("Expired")
 		}
 		replicated = true
 		sharding = false
