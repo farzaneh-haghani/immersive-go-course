@@ -17,14 +17,26 @@ func CsvToStruct(textByte []byte) []Score {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "can't read: %s", err)
 	}
+	nameIndex := -1
+	highScoreIndex := -1
+	i := 0
+	for nameIndex == -1 || highScoreIndex == -1 || i < len(records[0]) {
+		if records[0][i] == "name" {
+			nameIndex = i
+		} else if records[0][i] == "high score" {
+			highScoreIndex = i
+		}
+		i++
+	}
 
 	for i := 1; i < len(records); i++ {
-		highScore, err := strconv.Atoi(records[i][1])
+		highScore, err := strconv.Atoi(records[i][highScoreIndex])
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "can't convert to number: %s", err)
+			fmt.Fprintf(os.Stderr, "can't parse the high score to type int: %s\n", err)
+			continue
 		}
-		s.Name = records[i][0]
-		s.High_Score = int32(highScore)
+		s.Name = records[i][nameIndex]
+		s.HighScore = int32(highScore)
 		result = append(result, s)
 	}
 	return result

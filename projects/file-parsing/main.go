@@ -1,44 +1,65 @@
 package main
 
 import (
+	"bytes"
 	filesConverting "file-parsing/types-converting"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 )
 
 func main() {
 	files := []string{"examples/json.txt", "examples/repeated-json.txt", "examples/data.csv", "examples/custom-binary-le.bin", "examples/custom-binary-be.bin"}
 	var result []filesConverting.Score
 
-	for i, file := range files {
-		textByte, err := os.ReadFile(file)
+	for _, file := range files {
+		textByte, err := readingFiles(file)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "can't read: %s", err)
 			os.Exit(2)
 		}
+		fileNameExtension := filepath.Ext(file)
 
-		switch i {
-		case 0, 1:
+		switch fileNameExtension {
+		case ".txt":
 			result = filesConverting.JsonToStruct(textByte)
-		case 2:
+		case ".csv":
 			result = filesConverting.CsvToStruct(textByte)
 		default:
 			result = filesConverting.CustomBinaryToStruct(textByte)
 		}
-		findMinMax(result)
+
+		var b bytes.Buffer
+		findMinMax(&b, result)
 	}
 }
 
-func findMinMax(result []filesConverting.Score) {
+func readingFiles(file string) ([]byte, error) {
+	textByte, err := os.ReadFile(file)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "can't read: %s", err)
+		return nil, err
+	}
+	return textByte, nil
+}
+
+func findMinMax(w io.Writer, result []filesConverting.Score) {
+	if len(result) == 0 {
+		fmt.Fprintln(w, "No score provided")
+		return
+	} else if len(result) == 1 {
+		fmt.Fprintf(w, "Min is: %v\n", result[0].Name)
+		return
+	}
 	min := &result[0]
 	max := &result[0]
 	for i := 1; i < len(result); i++ {
-		if result[i].High_Score < min.High_Score {
+		if result[i].HighScore < min.HighScore {
 			min = &result[i]
 		}
-		if result[i].High_Score > max.High_Score {
+		if result[i].HighScore > max.HighScore {
 			max = &result[i]
 		}
 	}
-	fmt.Printf("\nMin is: %s \nMax is: %s\n", min.Name, max.Name)
+	fmt.Fprintf(w, "\nMin is: %s \nMax is: %s\n", min.Name, max.Name)
 }
