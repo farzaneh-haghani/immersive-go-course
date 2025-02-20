@@ -61,7 +61,7 @@ Content-Type: text/plain; charset=utf-8
 Hello, world
 ```
 
-> 💡 See the [prep README.md](../prep/README.md#command-line-examples) for an explanation of this command line example.
+> 💡 See the [prep README.md](../../prep/README.md#command-line-examples) for an explanation of this command line example.
 
 A common [protocol](https://en.m.wikipedia.org/wiki/Communication_protocol) for sending data between clients and servers over the internet is HTTP. It's used for websites, for example.
 
@@ -112,7 +112,7 @@ Use `http.NotFoundHandler()` for the `404` error.
 
 ### The Content-Type header
 
-HTTP requests can return more than just plan text. Next, make the index page at `/` returns some HTML in response to a `GET` request. Make sure the `Content-Type` response header is set: `w.Header().Add("Content-Type", "text/html")`
+HTTP requests can return more than just plain text. Next, make the index page at `/` returns some HTML in response to a `GET` request. Make sure the `Content-Type` response header is set: `w.Header().Add("Content-Type", "text/html")`
 
 ```
 > curl -i 'http://localhost:8080/'
